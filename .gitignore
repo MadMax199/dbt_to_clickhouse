@@ -33,3 +33,5 @@ desktop.ini
 # === Daten & Logs (Optional, je nach Bedarf) ===
 data/
 *.log
+
+seeds/*.csv
