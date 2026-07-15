@@ -1,66 +1,66 @@
-# 🚀 Smart-Meter Data Modeling: Star Schema vs. One Big Table in ClickHouse Cloud
+# 🚀 Smart-Meter-Datenmodellierung: Star-Schema vs. One Big Table in ClickHouse Cloud
 
-This repository contains the complete implementation and benchmarking framework for evaluating two fundamental data modeling paradigms—the **Star Schema** and **One Big Table (OBT)**—using high-frequency Smart-Meter data, static building assets, and weather time-series.
+Dieses Repository enthält das vollständige Implementierungs- und Benchmarking-Framework zur Evaluierung von zwei fundamentalen Datenmodellierungsparadigmen – dem **Star-Schema** und der **One Big Table (OBT)** – unter Verwendung hochfrequenter Smart-Meter-Zeitreihen, statischer Gebäude-Stammdaten und Wetterdaten.
 
-The pipeline is orchestrated using **dbt (data build tool)** and executed natively in **ClickHouse Cloud**, a high-performance, column-oriented OLAP database management system.
-
----
-
-## 📖 Theoretical Context & Problem Statement
-
-The integration of renewable energies and dynamic tariffs requires a rapid digital transformation of the power grid. Initiatives like the German Smart-Meter Rollout (**GNDEW 2023**; **BMWK 2024**) generate billions of high-frequency data points. 
-
-Analysing this data requires combining highly dynamic consumption streams with static building metadata and spatial weather data (*Ji et al., 2020*).
-
-### The Semiotic & Architectural Challenge
-* **The Structural Gap:** Traditional relational systems optimized for OLTP (using 3rd Normal Form to avoid redundancies, *Codd, 1970*) fail to perform aggregate calculations over massive datasets due to expensive runtime join operations (*Chaudhuri & Dayal, 1997*).
-* **The Semantic Gap:** Aligning heterogeneous schemas (time-series, spatial grid coordinates, and property metadata) requires a robust semantic layer to prevent data inconsistency.
-
-To address these gaps, this project implements and benchmarks:
-1. **The Star Schema (Dimensional Modeling):** Segmenting data into a central fact table and direct denormalized dimension tables (*Kimball & Ross, 2013*).
-2. **One Big Table (OBT):** A single, wide table consolidating all attributes, eliminating run-time joins (*Späti, 2026*).
+Die Pipeline wird mithilfe von **dbt (data build tool)** orchestriert und nativ in **ClickHouse Cloud** ausgeführt, einem hochperformanten, spaltenorientierten OLAP-Datenbankmanagementsystem.
 
 ---
 
-## 🛠️ Technological Pillars
+## 📖 Theoretischer Kontext & Problemstellung
 
-### 1. ClickHouse as OLAP target
-Unlike traditional row-oriented databases (e.g., PostgreSQL), ClickHouse employs a **column-oriented storage architecture** (*Anand, 2021*). 
-* It writes the values of each column into separate, logically closed files (*Abadi et al., 2013*).
-* When run-time aggregations are triggered, only the target columns are loaded into memory, completely bypassing unnecessary I/O overhead (*Abadi et al., 2008*).
-* ClickHouse leverages vectorised query execution and specialized physical sorting engines like the **MergeTree** table engine to accelerate lookups.
+Der Ausbau der erneuerbaren Energien und die Nutzung dynamischer Stromtarife erfordern eine schnelle digitale Transformation des Stromnetzes. Initiativen wie der deutsche Smart-Meter-Rollout (**GNDEW 2023**; **BMWK 2024**) erzeugen Milliarden hochfrequenter Datenpunkte.
 
-### 2. dbt (data build tool) for Analytics Engineering
-Rather than relying on classic ETL, this project implements a modern **ELT (Extract, Load, Transform)** workflow (*Reis & Housley, 2022*). 
-Raw data is loaded straight into ClickHouse, and dbt acts as the orchestrator for **In-Database-Transformations** (*Solimito, 2023*):
-* **Modularization:** SQL models are defined in separate modules and dynamically linked using Jinja-templated references (`ref()`). dbt calculates the dependency tree via a Directed Acyclic Graph (**DAG**).
-* **Data Quality:** Declarative schema and data quality tests are ran automatically on schema boundaries.
-* **Software Practices:** Models are version-controlled via Git, bringing CI/CD principles to data warehousing.
+Die Analyse dieser Daten erfordert die Kombination hochdynamischer Verbrauchswerte mit statischen Gebäude- und Anlagenstammdaten sowie dynamischen Wetterdaten (*Ji et al., 2020*).
+
+### Die semiotische & architektonische Herausforderung
+* **Die strukturelle Lücke:** Klassische relationale Systeme, die für OLTP optimiert sind (unter Verwendung der 3. Normalform zur Vermeidung von Redundanzen, *Codd, 1970*), scheitern bei komplexen Aggregationsberechnungen über riesige Datenmengen aufgrund rechenintensiver Join-Operationen zur Abfragezeit (*Chaudhuri & Dayal, 1997*).
+* **Die semantische Lücke:** Die Verknüpfung heterogener Schemata (Zeitreihen, geografische Netzkoordinaten und Gebäude-Metadaten) erfordert eine robuste semantische Schicht, um Inkonsistenzen zu verhindern.
+
+Um diese Herausforderungen zu bewältigen, implementiert und vergleicht dieses Projekt:
+1. **Das Star-Schema (Dimensionale Modellierung):** Aufteilung der Daten in eine zentrale Faktentabelle und direkt verknüpfte, denormalisierte Dimensionstabellen (*Kimball & Ross, 2013*).
+2. **One Big Table (OBT):** Eine einzige, breite Tabelle, die alle Attribute konsolidiert und Joins zur Abfragezeit überflüssig macht (*Späti, 2026*).
 
 ---
 
-## 📊 Paradigm Comparison: ETL vs. ELT
+## 🛠️ Technologische Säulen
 
-| Aspect | Classical ETL Approach | Modern ELT Approach |
+### 1. ClickHouse als OLAP-Zielsystem
+Im Gegensatz zu traditionellen zeilenorientierten Datenbanken (z. B. PostgreSQL) setzt ClickHouse auf eine **spaltenorientierte Speicherarchitektur** (*Anand, 2021*).
+* Die Werte jeder einzelnen Spalte werden in separate, logisch geschlossene Dateien auf dem Speichermedium geschrieben (*Abadi et al., 2013*).
+* Bei analytischen Aggregationsabfragen müssen physisch nur diejenigen Spaltendateien in den Arbeitsspeicher geladen werden, die tatsächlich Teil der Operation sind. Der enorme I/O-Overhead wird somit systemisch eliminiert (*Abadi et al., 2008*).
+* ClickHouse nutzt eine hochgradig parallelisierte, vektorisierte Abfrageausführung sowie die spezialisierte **MergeTree**-Tabellen-Engine, um Such- und Aggregationsvorgänge extrem zu beschleunigen.
+
+### 2. dbt (data build tool) für Analytics Engineering
+Anstelle des klassischen ETL-Ansatzes implementiert dieses Projekt einen modernen **ELT-Workflow (Extract, Load, Transform)** *(Reis & Housley, 2022)*.
+Die Rohdaten werden direkt in ClickHouse geladen, und dbt fungiert als Orchestrator für die **In-Database-Transformationen** (*Solimito, 2023*):
+* **Modularität:** SQL-Modelle werden in separaten Dateien definiert und über die Jinja-Templating-Engine mittels der `ref()`-Funktion dynamisch miteinander verknüpft. dbt generiert daraus automatisch einen gerichteten kreisfreien Graphen (Directed Acyclic Graph, **DAG**), der die exakte Reihenfolge der Tabellenerstellung steuert.
+* **Datenqualität:** Deklarative Schema- und Datenqualitätstests (z. B. auf Eindeutigkeit oder Nullwerte) werden automatisiert an den Modellgrenzen ausgeführt.
+* **Softwareentwicklung-Best-Practices:** Modelle werden über Git versioniert, wodurch CI/CD-Prinzipien in die Datenmodellierung einziehen.
+
+---
+
+## 📊 Paradigmen-Vergleich: ETL vs. ELT
+
+| Aspekt | Klassischer ETL-Ansatz | Moderner ELT-Ansatz |
 | :--- | :--- | :--- |
-| **Storage & Cost** | Storage was expensive; required high optimization. | Cloud storage is cheap; high CPU compute is optimized. |
-| **Modeling Priority** | Storage efficiency (avoiding redundancy). | Query latency and developer efficiency. |
-| **Architecture** | Strong normalization (3NF) to reduce footprint. | Redundant, denormalized layouts for fast reads. |
-| **Transformation** | Executed *before* loading, outside the warehouse. | Executed *after* loading raw data directly inside OLAP. |
+| **Speicher & Kosten** | Physischer Speicher war teuer und musste stark optimiert werden. | Cloud-Speicher ist günstig; CPU-Rechenleistung für Berechnungen wird optimiert. |
+| **Modellierungs-Priorität** | Speichereffizienz (Vermeidung von Redundanzen). | Abfragegeschwindigkeit und Entwicklereffizienz. |
+| **Architektur** | Starke Normalisierung (3NF) zur Reduzierung des Footprints. | Redundante, denormalisierte Strukturen für schnelle Lesezugriffe. |
+| **Transformation** | Daten werden vor dem Laden außerhalb des Data Warehouse transformiert. | Transformationen erfolgen direkt nach dem Laden der Rohdaten im OLAP-System. |
 
 ---
 
-## 📁 Repository Structure
+## 📁 Repository-Struktur
 
 ```text
-├── .venv/                     # Isolated Python environment
-├── analyses/                  # Benchmark SQL queries (Performance tests)
+├── .venv/                     # Isolierte virtuelle Python-Umgebung
+├── analyses/                  # SQL-Queries für die Performance-Benchmarks
 ├── models/
-│   ├── staging/               # Staging models: cleaning, casting (HEAPO source)
-│   ├── intermediate/          # Intermediate views, early aggregations
+│   ├── staging/               # Staging-Modelle: Bereinigung & Typisierung (HEAPO-Quelle)
+│   ├── intermediate/          # Intermediate-Views und vorbereitende Joins
 │   └── marts/
-│       ├── star_schema/       # Mart: Fact table (fct_) & Dimension tables (dim_)
-│       └── obt/               # Mart: Fully denormalized One Big Table (OBT)
-├── tests/                     # Schema, unique, and non-null data assertions
-├── dbt_project.yml            # Core dbt configuration
-└── profiles.yml.example       # Example database connection profile
+│       ├── star_schema/       # Mart-Ebene: Faktentabelle (fct_) & Dimensionen (dim_)
+│       └── obt/               # Mart-Ebene: Vollständig denormalisierte One Big Table (OBT)
+├── tests/                     # Schema- und Datenqualitätstests (Unique, Not Null, etc.)
+├── dbt_project.yml            # Zentrale dbt-Projektkonfiguration
+└── profiles.yml.example       # Vorlage für die ClickHouse-Verbindung
