@@ -1,14 +1,37 @@
-# Python virtual environment
+# === dbt spezifisch ===
+target/
+dbt_packages/
+logs/
+# Falls du sensible Daten in Seeds hast, die NICHT ins Repo sollen:
+# seeds/*.csv 
+
+# === Python & Virtuelle Umgebung ===
 .venv/
 venv/
-
-# Daten
-*.csv
-
-# Python cache
+ENV/
+env/
+bin/
+lib/
+include/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# OS
+# === IDE & Editoren ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === OS spezifisch ===
 .DS_Store
 Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# === Daten & Logs (Optional, je nach Bedarf) ===
+data/
+*.log
+
+seeds/*.csv

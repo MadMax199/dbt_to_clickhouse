@@ -1,0 +1,48 @@
+name: 'dbt_to_clickhouse'
+version: '1.0.0'
+config-version: 2
+
+# Verknüpfung zur profiles.yml
+profile: 'dbt_to_clickhouse'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  dbt_to_clickhouse:
+    # Hier können wir den example-Ordner ignorieren, da du ihn gelöscht hast
+    +materialized: table
+
+seeds:
+  dbt_to_clickhouse:
+    # Globale Einstellungen für alle 1308 Dateien
+    +delimiter: ";"
+    +quote_columns: false
+
+    # Fix für die fehlerhafte Messwert-Datei (verhindert den Int32-Error)
+    "7069411":
+      +column_types:
+        kWh_returned_Total: String
+        kWh_returned_Day: String
+        kWh_returned_Night: String
+
+    # Fix für households (Semikolon-Trennung sicherstellen)
+    households:
+      +column_types:
+        Household_ID: String
+
+    # Fix für protocols (verhindert den Date-Error bei unsauberen Zeilen)
+    protocols:
+      +column_types:
+        Report_ID: String
+        Household_ID: String
+        Visit_Date: String
+        Visit_Year: String
