@@ -1,6 +1,6 @@
 # 🚀 Smart-Meter-Datenmodellierung: Star-Schema vs. One Big Table in ClickHouse Cloud
 
-Dieses Repository enthält das vollständige Implementierungs- und Benchmarking-Framework zur Evaluierung von zwei fundamentalen Datenmodellierungsparadigmen – dem **Star-Schema** und der **One Big Table (OBT)** – unter Verwendung hochfrequenter Smart-Meter-Zeitreihen, statischer Gebäude-Stammdaten und Wetterdaten.
+Dieses Repository enthält das vollständige Implementierungs- und Benchmarking-Framework zur Evaluierung von zwei privaten Datenmodellierungsparadigmen – dem **Star-Schema** und der **One Big Table (OBT)** – unter Verwendung hochfrequenter Smart-Meter-Zeitreihen, statischer Gebäude-Stammdaten und Wetterdaten.
 
 Die Pipeline wird mithilfe von **dbt (data build tool)** orchestriert und nativ in **ClickHouse Cloud** ausgeführt, einem hochperformanten, spaltenorientierten OLAP-Datenbankmanagementsystem.
 
@@ -8,31 +8,31 @@ Die Pipeline wird mithilfe von **dbt (data build tool)** orchestriert und nativ 
 
 ## 📖 Theoretischer Kontext & Problemstellung
 
-Der Ausbau der erneuerbaren Energien und die Nutzung dynamischer Stromtarife erfordern eine schnelle digitale Transformation des Stromnetzes. Initiativen wie der deutsche Smart-Meter-Rollout (**GNDEW 2023**; **BMWK 2024**) erzeugen Milliarden hochfrequenter Datenpunkte.
+Der Ausbau der erneuerbaren Energien und die Nutzung dynamischer Stromtarife erfordern eine schnelle digitale Transformation des Stromnetzes. Initiativen rund um den Smart-Meter-Rollout erzeugen Milliarden hochfrequenter Datenpunkte.
 
-Die Analyse dieser Daten erfordert die Kombination hochdynamischer Verbrauchswerte mit statischen Gebäude- und Anlagenstammdaten sowie dynamischen Wetterdaten (*Ji et al., 2020*).
+Die Analyse dieser Daten erfordert die Kombination hochdynamischer Verbrauchswerte mit statischen Gebäude- und Anlagenstammdaten sowie dynamischen Wetterdaten.
 
-### Die semiotische & architektonische Herausforderung
-* **Die strukturelle Lücke:** Klassische relationale Systeme, die für OLTP optimiert sind (unter Verwendung der 3. Normalform zur Vermeidung von Redundanzen, *Codd, 1970*), scheitern bei komplexen Aggregationsberechnungen über riesige Datenmengen aufgrund rechenintensiver Join-Operationen zur Abfragezeit (*Chaudhuri & Dayal, 1997*).
+### Die architektonische Herausforderung
+* **Die strukturelle Lücke:** Klassische relationale Systeme, die für transaktionale Prozesse (OLTP) optimiert sind (unter Verwendung starker Normalisierung zur Vermeidung von Redundanzen), scheitern bei komplexen Aggregationsberechnungen über riesige Datenmengen aufgrund rechenintensiver Join-Operationen zur Abfragezeit.
 * **Die semantische Lücke:** Die Verknüpfung heterogener Schemata (Zeitreihen, geografische Netzkoordinaten und Gebäude-Metadaten) erfordert eine robuste semantische Schicht, um Inkonsistenzen zu verhindern.
 
 Um diese Herausforderungen zu bewältigen, implementiert und vergleicht dieses Projekt:
-1. **Das Star-Schema (Dimensionale Modellierung):** Aufteilung der Daten in eine zentrale Faktentabelle und direkt verknüpfte, denormalisierte Dimensionstabellen (*Kimball & Ross, 2013*).
-2. **One Big Table (OBT):** Eine einzige, breite Tabelle, die alle Attribute konsolidiert und Joins zur Abfragezeit überflüssig macht (*Späti, 2026*).
+1. **Das Star-Schema (Dimensionale Modellierung):** Aufteilung der Daten in eine zentrale Faktentabelle und direkt verknüpfte, denormalisierte Dimensionstabellen.
+2. **One Big Table (OBT):** Eine einzige, breite Tabelle, die alle Attribute konsolidiert und Joins zur Abfragezeit überflüssig macht.
 
 ---
 
 ## 🛠️ Technologische Säulen
 
 ### 1. ClickHouse als OLAP-Zielsystem
-Im Gegensatz zu traditionellen zeilenorientierten Datenbanken (z. B. PostgreSQL) setzt ClickHouse auf eine **spaltenorientierte Speicherarchitektur** (*Anand, 2021*).
-* Die Werte jeder einzelnen Spalte werden in separate, logisch geschlossene Dateien auf dem Speichermedium geschrieben (*Abadi et al., 2013*).
-* Bei analytischen Aggregationsabfragen müssen physisch nur diejenigen Spaltendateien in den Arbeitsspeicher geladen werden, die tatsächlich Teil der Operation sind. Der enorme I/O-Overhead wird somit systemisch eliminiert (*Abadi et al., 2008*).
+Im Gegensatz zu traditionellen zeilenorientierten Datenbanken setzt ClickHouse auf eine **spaltenorientierte Speicherarchitektur**.
+* Die Werte jeder einzelnen Spalte werden in separate, logisch geschlossene Dateien auf dem Speichermedium geschrieben.
+* Bei analytischen Aggregationsabfragen müssen physisch nur diejenigen Spaltendateien in den Arbeitsspeicher geladen werden, die tatsächlich Teil der Operation sind. Der enorme I/O-Overhead wird somit systemisch eliminiert.
 * ClickHouse nutzt eine hochgradig parallelisierte, vektorisierte Abfrageausführung sowie die spezialisierte **MergeTree**-Tabellen-Engine, um Such- und Aggregationsvorgänge extrem zu beschleunigen.
 
 ### 2. dbt (data build tool) für Analytics Engineering
-Anstelle des klassischen ETL-Ansatzes implementiert dieses Projekt einen modernen **ELT-Workflow (Extract, Load, Transform)** *(Reis & Housley, 2022)*.
-Die Rohdaten werden direkt in ClickHouse geladen, und dbt fungiert als Orchestrator für die **In-Database-Transformationen** (*Solimito, 2023*):
+Anstelle des klassischen ETL-Ansatzes implementiert dieses Projekt einen modernen **ELT-Workflow (Extract, Load, Transform)**.
+Die Rohdaten werden direkt in ClickHouse geladen, und dbt fungiert als Orchestrator für die **In-Database-Transformationen**:
 * **Modularität:** SQL-Modelle werden in separaten Dateien definiert und über die Jinja-Templating-Engine mittels der `ref()`-Funktion dynamisch miteinander verknüpft. dbt generiert daraus automatisch einen gerichteten kreisfreien Graphen (Directed Acyclic Graph, **DAG**), der die exakte Reihenfolge der Tabellenerstellung steuert.
 * **Datenqualität:** Deklarative Schema- und Datenqualitätstests (z. B. auf Eindeutigkeit oder Nullwerte) werden automatisiert an den Modellgrenzen ausgeführt.
 * **Softwareentwicklung-Best-Practices:** Modelle werden über Git versioniert, wodurch CI/CD-Prinzipien in die Datenmodellierung einziehen.
