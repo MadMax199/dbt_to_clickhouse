@@ -1,42 +1,27 @@
--- Staging-Modell für die Smart-Meter-Zeitreihen.
--- Die 1.298 Messwertdateien (eine je Household_ID) werden über das Macro
--- get_meter_reading_seed_names() automatisch erkannt und mittels
--- dbt_utils.union_relations() zu einer einzigen Tabelle zusammengeführt.
--- Voraussetzung: Paket dbt-labs/dbt_utils (siehe packages.yml).
+-- Staging-Modell für die Auditprotokolle (protocols.csv, 106 Spalten)
+-- Report_ID, Household_ID, Visit_Year und Visit_Date wurden in der dbt_project.yml
+-- als String erzwungen (unsaubere Rohwerte) und werden hier sicher in Zieltypen überführt.
+-- Alle übrigen ~100 Gebäude-/Anlagenattribute werden unverändert durchgereicht,
+-- da ihre Aufteilung in einzelne, fachliche Bereiche erst im Mart-Layer (dim_protocol) erfolgt.
 
-{% set meter_seed_names = get_meter_reading_seed_names() %}
+with source as (
 
-{% set relations = [] %}
-{% for seed_name in meter_seed_names %}
-    {% do relations.append(ref(seed_name)) %}
-{% endfor %}
-
-with unioned as (
-
-    {{ dbt_utils.union_relations(relations=relations) }}
+    select * from {{ ref('protocols') }}
 
 ),
 
 renamed as (
 
     select
-        cast(Household_ID as String)                as household_id,
-        `Group`                                      as household_group,
-        AffectsTimePoint                              as affects_time_point,
-        toDateTime(Timestamp)                         as reading_timestamp,
-        toDate(Timestamp)                             as reading_date,
-        kWh_received_Total                            as kwh_received_total,
-        kWh_received_HeatPump                         as kwh_received_heatpump,
-        kWh_received_Other                            as kwh_received_other,
-        kWh_returned_Total                            as kwh_returned_total,
-        kvarh_received_capacitive_Total               as kvarh_received_capacitive_total,
-        kvarh_received_capacitive_HeatPump            as kvarh_received_capacitive_heatpump,
-        kvarh_received_capacitive_Other               as kvarh_received_capacitive_other,
-        kvarh_received_inductive_Total                as kvarh_received_inductive_total,
-        kvarh_received_inductive_HeatPump             as kvarh_received_inductive_heatpump,
-        kvarh_received_inductive_Other                as kvarh_received_inductive_other
+        cast(Report_ID as String)              as report_id,
+        cast(Household_ID as String)           as household_id,
+        toUInt16OrNull(Visit_Year)             as visit_year,
+        toDateOrNull(Visit_Date)               as visit_date,
 
-    from unioned
+        -- restliche ~102 Gebäude-, Wärmepumpen- und Heizsystem-Attribute unverändert übernehmen
+        * except (Report_ID, Household_ID, Visit_Year, Visit_Date)
+
+    from source
 
 )
 

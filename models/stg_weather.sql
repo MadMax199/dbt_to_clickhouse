@@ -1,65 +1,53 @@
--- Staging-Modell für die Haushalts-Stammdaten (households.csv)
--- Wandelt die Python-Style "True"/"False"-Strings der Flags in UInt8 um
--- und benennt 'Group' um, da es ein reserviertes Schlüsselwort in ClickHouse ist (GROUP BY).
+-- Staging-Modell für die Wetterstationsdaten.
+-- Da es nur 8 Wetterstationen gibt (im Gegensatz zu den 1.298 Messwertdateien),
+-- wird die Union hier bewusst explizit statt dynamisch aufgebaut - das bleibt lesbar
+-- und muss sich nicht ändern, solange keine neue Wetterstation hinzukommt.
 
-with source as (
+with hg as (select * from {{ ref('Hg') }}),
+     mqo as (select * from {{ ref('MqO') }}),
+     ceoxs as (select * from {{ ref('ceOxS') }}),
+     sv3mr as (select * from {{ ref('sV3mR') }}),
+     wdd as (select * from {{ ref('wDD') }}),
+     z6i as (select * from {{ ref('z6I') }}),
+     jb8 as (select * from {{ ref('8jB') }}),
+     hbsbg as (select * from {{ ref('HbsbG') }}),
 
-    select * from {{ ref('households') }}
+unioned as (
+
+    select * from hg
+    union all
+    select * from mqo
+    union all
+    select * from ceoxs
+    union all
+    select * from sv3mr
+    union all
+    select * from wdd
+    union all
+    select * from z6i
+    union all
+    select * from jb8
+    union all
+    select * from hbsbg
 
 ),
 
 renamed as (
 
     select
-        cast(Household_ID as String)               as household_id,
-        `Group`                                     as household_group,
-        Weather_ID                                  as weather_id,
-        Protocols_ReportIDs                         as protocol_report_ids,
+        Weather_ID                          as weather_id,
+        toDate(Timestamp)                   as weather_date,
+        Temperature_max_daily                as temperature_max_daily,
+        Temperature_min_daily                as temperature_min_daily,
+        Temperature_avg_daily                as temperature_avg_daily,
+        HeatingDegree_SIA_daily              as heating_degree_sia_daily,
+        HeatingDegree_US_daily               as heating_degree_us_daily,
+        CoolingDegree_US_daily               as cooling_degree_us_daily,
+        Humidity_avg_daily                   as humidity_avg_daily,
+        Precipitation_total_daily            as precipitation_total_daily,
+        Sunshine_duration_daily              as sunshine_duration_daily
 
-        -- Boolesche Flags: "True"/"False"-Strings -> UInt8 (0/1), leere Werte -> NULL
-        case
-            when Installation_HasPVSystem = 'True' then 1
-            when Installation_HasPVSystem = 'False' then 0
-            else null
-        end                                          as has_pv_system,
-
-        case
-            when Protocols_Available = 'True' then 1
-            when Protocols_Available = 'False' then 0
-            else null
-        end                                          as has_protocols,
-
-        case
-            when Protocols_HasMultipleVisits = 'True' then 1
-            when Protocols_HasMultipleVisits = 'False' then 0
-            else null
-        end                                          as has_multiple_protocol_visits,
-
-        case
-            when MetaData_Available = 'True' then 1
-            when MetaData_Available = 'False' then 0
-            else null
-        end                                          as has_metadata,
-
-        case
-            when SmartMeterData_Available_15min = 'True' then 1
-            when SmartMeterData_Available_15min = 'False' then 0
-            else null
-        end                                          as has_smartmeter_15min,
-
-        case
-            when SmartMeterData_Available_Daily = 'True' then 1
-            when SmartMeterData_Available_Daily = 'False' then 0
-            else null
-        end                                          as has_smartmeter_daily,
-
-        case
-            when SmartMeterData_Available_Monthly = 'True' then 1
-            when SmartMeterData_Available_Monthly = 'False' then 0
-            else null
-        end                                          as has_smartmeter_monthly
-
-    from source
+    from unioned
 
 )
 
