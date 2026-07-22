@@ -1,0 +1,9 @@
+version: 2  models:   
+- name: dim_household     
+description: "Dimensionstabelle: ein Datensatz pro Haushalt der HEAPO-Feldstudie"     
+columns:      
+ - name: household_id         
+ description: "Eindeutige Haushalts-ID, Primaerschluessel dieser Dimension"         
+ data_tests:           
+ - unique           
+ - not_null
