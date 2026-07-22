@@ -1,9 +1,58 @@
-version: 2  models:   
-- name: dim_household     
-description: "Dimensionstabelle: ein Datensatz pro Haushalt der HEAPO-Feldstudie"     
-columns:      
- - name: household_id         
- description: "Eindeutige Haushalts-ID, Primaerschluessel dieser Dimension"         
- data_tests:           
- - unique           
- - not_null
+version: 2
+
+models:
+  - name: dim_household
+    description: "Dimensionstabelle: ein Datensatz pro Haushalt der HEAPO-Feldstudie"
+    columns:
+      - name: household_id
+        description: "Eindeutige Haushalts-ID, Primärschlüssel dieser Dimension"
+        data_tests:
+          - unique
+          - not_null
+
+  - name: dim_weather
+    description: "Dimensionstabelle: tägliche Wetterdaten je Wetterstation"
+    columns:
+      - name: weather_id
+        description: "Fremdschlüssel zu dim_household (Zuordnung Haushalt zu Wetterstation)"
+        data_tests:
+          - not_null
+      - name: weather_date
+        description: "Datum des Wetterwerts, Teil des zusammengesetzten Schlüssels"
+        data_tests:
+          - not_null
+
+  - name: dim_protocol
+    description: "Dimensionstabelle: eine Zeile pro Vor-Ort-Begehung (Audit)"
+    columns:
+      - name: report_id
+        description: "Eindeutige Report-ID, Primärschlüssel dieser Dimension"
+        data_tests:
+          - unique
+          - not_null
+      - name: household_id
+        description: "Fremdschlüssel zu dim_household (NICHT eindeutig - Mehrfachbesuche möglich)"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_household')
+              field: household_id
+  - name: fct_meter_readings
+      description: "Faktentabelle: Smart-Meter-Zeitreihen, ein Datensatz je Haushalt und Zeitstempel"
+      columns:
+        - name: household_id
+          description: "Fremdschlüssel zu dim_household"
+          data_tests:
+            - not_null
+            - relationships:
+                to: ref('dim_household')
+                field: household_id
+        - name: reading_timestamp
+          description: "Zeitstempel der Messung, Teil des zusammengesetzten Schlüssels"
+          data_tests:
+            - not_null
+      data_tests:
+        - dbt_utils.unique_combination_of_columns:
+            combination_of_columns:
+              - household_id
+              - reading_timestamp
