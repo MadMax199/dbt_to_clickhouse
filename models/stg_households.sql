@@ -16,7 +16,6 @@ renamed as (
         Weather_ID                                  as weather_id,
         Protocols_ReportIDs                         as protocol_report_ids,
 
-        -- Boolesche Flags: "True"/"False"-Strings -> UInt8 (0/1), leere Werte -> NULL
         case
             when Installation_HasPVSystem = 'True' then 1
             when Installation_HasPVSystem = 'False' then 0

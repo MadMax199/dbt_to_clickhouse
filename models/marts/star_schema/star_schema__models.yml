@@ -21,6 +21,11 @@ models:
         description: "Datum des Wetterwerts, Teil des zusammengesetzten Schlüssels"
         data_tests:
           - not_null
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - weather_id
+            - weather_date
 
   - name: dim_protocol
     description: "Dimensionstabelle: eine Zeile pro Vor-Ort-Begehung (Audit)"
@@ -52,6 +57,13 @@ models:
         description: "Zeitstempel der Messung, Teil des zusammengesetzten Schlüssels"
         data_tests:
           - not_null
+      - name: weather_id
+        description: "Fremdschlüssel zu dim_weather; die konkrete Wetterzeile wird über weather_id und reading_date/weather_date bestimmt"
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_weather')
+              field: weather_id
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns:

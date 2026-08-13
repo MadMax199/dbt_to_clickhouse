@@ -18,7 +18,6 @@ renamed as (
         toUInt16OrNull(Visit_Year)             as visit_year,
         toDateOrNull(Visit_Date)               as visit_date,
 
-        -- restliche ~102 Gebäude-, Wärmepumpen- und Heizsystem-Attribute unverändert übernehmen
         * except (Report_ID, Household_ID, Visit_Year, Visit_Date)
 
     from source
