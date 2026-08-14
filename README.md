@@ -1,9 +1,6 @@
 # 🚀 Smart-Meter-Datenmodellierung: Star-Schema vs. One Big Table in ClickHouse Cloud
 
-Dieses Repository enthält das vollständige Implementierungs- und Benchmarking-Framework zur Evaluierung von zwei privaten Datenmodellierungsparadigmen – dem **Star-Schema** und der **One Big Table (OBT)** – unter Verwendung hochfrequenter Smart-Meter-Zeitreihen, statischer Gebäude-Stammdaten und Wetterdaten.
-
-Die Pipeline wird mithilfe von **dbt (data build tool)** orchestriert und nativ in **ClickHouse Cloud** ausgeführt, einem hochperformanten, spaltenorientierten OLAP-Datenbankmanagementsystem.
-
+Dieses Repository enthält das vollständige Implementierungs- und Benchmarking-Framework zur Evaluierung von zwei Datenmodellierungsparadigmen – dem **Star-Schema** und der **One Big Table (OBT)** – unter Verwendung hochfrequenter Smart-Meter-Zeitreihen, statischer Gebäude-Stammdaten und Wetterdaten.
 ---
 
 ## 📖 Theoretischer Kontext & Problemstellung
