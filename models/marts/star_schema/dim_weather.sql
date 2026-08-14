@@ -1,5 +1,4 @@
 -- Dimensionstabelle: Wetter
--
 
 select
     weather_id,
