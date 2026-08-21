@@ -23,7 +23,8 @@ __pycache__/
 .idea/
 *.swp
 *.swo
-
+# Credentials
+.env
 # === OS spezifisch ===
 .DS_Store
 Thumbs.db

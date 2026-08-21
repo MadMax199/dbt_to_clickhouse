@@ -2,7 +2,6 @@ name: 'dbt_to_clickhouse'
 version: '1.0.0'
 config-version: 2
  
-# Verknüpfung zur profiles.yml
 profile: 'dbt_to_clickhouse'
  
 model-paths: ["models"]
@@ -18,20 +17,16 @@ clean-targets:
  
 models:
   dbt_to_clickhouse:
-    # Staging-Modelle als View: kein zusätzlicher Speicherverbrauch für Zwischenschritte
     staging:
       +materialized: view
-    # Finale Dimensions- und Faktentabellen des Star Schemas als Table
     marts:
       +materialized: table
  
 seeds:
   dbt_to_clickhouse:
-    # Globale Einstellungen für alle 1308 Dateien
     +delimiter: ";"
     +quote_columns: false
  
-    # Fix für protocols (verhindert den Date-Error bei unsauberen Zeilen)
     protocols:
       +column_types:
         Report_ID: String
@@ -39,7 +34,6 @@ seeds:
         Visit_Date: String
         Visit_Year: String
  
-    # Fix für households (Semikolon-Trennung sicherstellen)
     households:
       +column_types:
         Household_ID: String
