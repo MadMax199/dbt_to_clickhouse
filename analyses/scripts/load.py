@@ -1,75 +1,229 @@
 from pathlib import Path
 import time
-import pandas as pd
-import clickhouse_connect
+from datetime import datetime
 
-
-
-N_RUNS = 10
-
-QUERY_DIR = Path("benchmarks/queries")
-RESULT_DIR = Path("benchmarks/results")
-
-RESULT_DIR.mkdir(parents=True, exist_ok=True)
-
-client = clickhouse_connect.get_client(
-    host="YOUR_CLICKHOUSE_HOST",
-    port=8443,
-    username="YOUR_USER",
-    password="YOUR_PASSWORD",
-    secure=True,
+from config import (
+    N_RUNS,
+    QUERIES,
+    STAR_TABLES,
+)
+from connection import get_clickhouse_client
+from runner import (
+    validate_query_files,
+    run_benchmarks,
+)
+from metrics import (
+    load_performance_metrics,
+    prepare_performance_metrics,
+    summarize_performance,
+    compare_performance,
+    load_storage_metrics,
+    compare_storage,
 )
 
-queries = [
-    ("q01", "star", "q01_monthly_consumption_star.sql"),
-    ("q01", "obt",  "q01_monthly_consumption_obt.sql"),
 
-    ("q02", "star", "q02_pv_consumption_star.sql"),
-    ("q02", "obt",  "q02_pv_consumption_obt.sql"),
+# -------------------------------------------------------
+# Pfade
+# -------------------------------------------------------
 
-    ("q03", "star", "q03_weather_consumption_star.sql"),
-    ("q03", "obt",  "q03_weather_consumption_obt.sql"),
+BASE_DIR = Path(__file__).resolve().parents[2]
 
-    ("q04", "star", "q04_protocol_consumption_star.sql"),
-    ("q04", "obt",  "q04_protocol_consumption_obt.sql"),
+QUERY_DIR = (
+    BASE_DIR
+    / "analyses"
+    / "benchmark_queries"
+)
 
-    ("q05", "star", "q05_multi_dimension_star.sql"),
-    ("q05", "obt",  "q05_multi_dimension_obt.sql"),
+RESULT_DIR = (
+    BASE_DIR
+    / "analyses"
+    / "results"
+)
 
-    ("q06", "star", "q06_ml_dataset_star.sql"),
-    ("q06", "obt",  "q06_ml_dataset_obt.sql"),
-]
+RESULT_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 
-for query_id, model, filename in queries:
+def main():
 
-    sql = (QUERY_DIR / filename).read_text(encoding="utf-8").strip().rstrip(";")
-
-    # Warm-up
-    client.query(
-        sql,
-        settings={
-            "use_query_cache": 0,
-            "enable_filesystem_cache": 0,
-        },
+    benchmark_id = (
+        datetime.now()
+        .strftime("%Y%m%d_%H%M%S")
     )
 
-    for run in range(1, N_RUNS + 1):
+    print("=" * 60)
+    print("Benchmark Star Schema vs. One Big Table")
+    print("=" * 60)
+    print(f"Benchmark-ID: {benchmark_id}")
+    print(f"Wiederholungen: {N_RUNS}")
 
-        log_comment = f"benchmark_{query_id}_{model}_run_{run}"
+    # ---------------------------------------------------
+    # Verbindung
+    # ---------------------------------------------------
 
-        client.query(
-            sql,
-            settings={
-                "use_query_cache": 0,
-                "enable_filesystem_cache": 0,
-                "log_comment": log_comment,
-            },
+    client = get_clickhouse_client()
+
+    connection_test = client.query(
+        "SELECT version(), currentDatabase()"
+    )
+
+    version, database = (
+        connection_test.result_rows[0]
+    )
+
+    print(f"ClickHouse-Version: {version}")
+    print(f"Datenbank: {database}")
+
+    # ---------------------------------------------------
+    # Benchmark-Queries prüfen
+    # ---------------------------------------------------
+
+    validate_query_files(
+        QUERIES,
+        QUERY_DIR,
+    )
+
+    # ---------------------------------------------------
+    # Benchmarks ausführen
+    # ---------------------------------------------------
+
+    run_benchmarks(
+        client=client,
+        queries=QUERIES,
+        query_dir=QUERY_DIR,
+        benchmark_id=benchmark_id,
+        n_runs=N_RUNS,
+    )
+
+    # ---------------------------------------------------
+    # Query Log aktualisieren
+    # ---------------------------------------------------
+
+    print("\nAktualisiere system.query_log...")
+
+    client.command(
+        "SYSTEM FLUSH LOGS"
+    )
+
+    time.sleep(1)
+
+    # ---------------------------------------------------
+    # Performance auswerten
+    # ---------------------------------------------------
+
+    performance_df = (
+        load_performance_metrics(
+            client,
+            benchmark_id,
         )
+    )
 
-        print(f"{query_id} | {model} | Run {run}/{N_RUNS}")
+    performance_df = (
+        prepare_performance_metrics(
+            performance_df,
+            benchmark_id,
+        )
+    )
 
-# Query Log flushen
-client.command("SYSTEM FLUSH LOGS")
+    summary_df = (
+        summarize_performance(
+            performance_df
+        )
+    )
 
-time.sleep(1)
+    performance_comparison_df = (
+        compare_performance(
+            summary_df
+        )
+    )
+
+    # ---------------------------------------------------
+    # Speicher auswerten
+    # ---------------------------------------------------
+
+    storage_df = (
+        load_storage_metrics(
+            client
+        )
+    )
+
+    storage_comparison_df = (
+        compare_storage(
+            storage_df,
+            STAR_TABLES,
+        )
+    )
+
+    # ---------------------------------------------------
+    # Ergebnisse speichern
+    # ---------------------------------------------------
+
+    performance_df.to_csv(
+        RESULT_DIR
+        / f"query_performance_{benchmark_id}.csv",
+        index=False,
+    )
+
+    summary_df.to_csv(
+        RESULT_DIR
+        / f"query_performance_summary_{benchmark_id}.csv",
+        index=False,
+    )
+
+    performance_comparison_df.to_csv(
+        RESULT_DIR
+        / f"query_performance_comparison_{benchmark_id}.csv",
+        index=False,
+    )
+
+    storage_df.to_csv(
+        RESULT_DIR
+        / f"storage_usage_{benchmark_id}.csv",
+        index=False,
+    )
+
+    storage_comparison_df.to_csv(
+        RESULT_DIR
+        / f"storage_comparison_{benchmark_id}.csv",
+        index=False,
+    )
+
+    # ---------------------------------------------------
+    # Abschluss
+    # ---------------------------------------------------
+
+    print("\n" + "=" * 60)
+    print("Benchmark abgeschlossen")
+    print("=" * 60)
+
+    print("\nPerformance:")
+    print(
+        summary_df.to_string(
+            index=False
+        )
+    )
+
+    print("\nStar Schema vs. OBT:")
+    print(
+        performance_comparison_df.to_string(
+            index=False
+        )
+    )
+
+    print("\nSpeicherbedarf:")
+    print(
+        storage_comparison_df.to_string(
+            index=False
+        )
+    )
+
+    print(
+        f"\nErgebnisse gespeichert unter:\n"
+        f"{RESULT_DIR}"
+    )
+
+
+if __name__ == "__main__":
+    main()
