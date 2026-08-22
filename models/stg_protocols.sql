@@ -13,12 +13,17 @@ with source as (
 renamed as (
 
     select
-        cast(Report_ID as String)              as report_id,
-        cast(Household_ID as String)           as household_id,
-        toUInt16OrNull(Visit_Year)             as visit_year,
-        toDateOrNull(Visit_Date)               as visit_date,
+        Report_ID as report_id,
+        Household_ID as household_id,
+        toUInt16OrNull(nullIf(Visit_Year, '')) as visit_year,
+        toDateOrNull(nullIf(Visit_Date, '')) as visit_date,
 
-        * except (Report_ID, Household_ID, Visit_Year, Visit_Date)
+        * except (
+            Report_ID,
+            Household_ID,
+            Visit_Year,
+            Visit_Date
+        )
 
     from source
 

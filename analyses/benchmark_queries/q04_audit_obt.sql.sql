@@ -6,6 +6,7 @@ SELECT
     visit_year,
     avg(kwh_received_heatpump) AS avg_heatpump_consumption
 FROM obt_smart_meter_readings
-WHERE report_id IS NOT NULL
+WHERE visit_date IS NOT NULL
+  AND visit_year IS NOT NULL
 GROUP BY visit_year
 ORDER BY visit_year;

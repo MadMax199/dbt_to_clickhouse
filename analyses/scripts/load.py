@@ -2,6 +2,8 @@ from pathlib import Path
 import time
 from datetime import datetime
 
+import pandas as pd
+
 from config import (
     N_RUNS,
     QUERIES,
@@ -20,6 +22,7 @@ from metrics import (
     load_storage_metrics,
     compare_storage,
 )
+from validation import compare_query_results
 
 
 # -------------------------------------------------------
@@ -48,6 +51,10 @@ RESULT_DIR.mkdir(
 
 def main():
 
+    # ---------------------------------------------------
+    # Benchmark-ID
+    # ---------------------------------------------------
+
     benchmark_id = (
         datetime.now()
         .strftime("%Y%m%d_%H%M%S")
@@ -69,9 +76,7 @@ def main():
         "SELECT version(), currentDatabase()"
     )
 
-    version, database = (
-        connection_test.result_rows[0]
-    )
+    version, database = connection_test.result_rows[0]
 
     print(f"ClickHouse-Version: {version}")
     print(f"Datenbank: {database}")
@@ -157,6 +162,70 @@ def main():
     )
 
     # ---------------------------------------------------
+    # Fachliche Validierung
+    # ---------------------------------------------------
+
+    print(
+        "\nValidiere fachliche Gleichheit "
+        "der Benchmark-Queries..."
+    )
+
+    validation_results = []
+    query_pairs = {}
+
+    # SQL-Dateien nach Query und Modell gruppieren
+    for query_id, model, filename in QUERIES:
+
+        sql = (
+            (QUERY_DIR / filename)
+            .read_text(
+                encoding="utf-8"
+            )
+            .strip()
+            .rstrip(";")
+        )
+
+        if query_id not in query_pairs:
+            query_pairs[query_id] = {}
+
+        query_pairs[query_id][model] = sql
+
+    # Star vs. OBT vergleichen
+    for query_id, models in query_pairs.items():
+
+        if "star" not in models or "obt" not in models:
+            raise ValueError(
+                f"Für {query_id} fehlt die "
+                "Star- oder OBT-Query."
+            )
+
+        result = compare_query_results(
+            client=client,
+            query_id=query_id,
+            star_sql=models["star"],
+            obt_sql=models["obt"],
+        )
+
+        validation_results.append(
+            result
+        )
+
+        print(
+            f"{query_id}: "
+            f"Rows "
+            f"{result['star_rows']} / "
+            f"{result['obt_rows']} | "
+            f"Columns: "
+            f"{result['same_columns']} | "
+            f"Values: "
+            f"{result['values_equal']}"
+        )
+
+    validation_df = pd.DataFrame(
+        validation_results
+    )
+
+    # ---------------------------------------------------
     # Ergebnisse speichern
     # ---------------------------------------------------
 
@@ -190,6 +259,12 @@ def main():
         index=False,
     )
 
+    validation_df.to_csv(
+        RESULT_DIR
+        / f"query_validation_{benchmark_id}.csv",
+        index=False,
+    )
+
     # ---------------------------------------------------
     # Abschluss
     # ---------------------------------------------------
@@ -215,6 +290,13 @@ def main():
     print("\nSpeicherbedarf:")
     print(
         storage_comparison_df.to_string(
+            index=False
+        )
+    )
+
+    print("\nFachliche Validierung:")
+    print(
+        validation_df.to_string(
             index=False
         )
     )

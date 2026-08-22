@@ -6,40 +6,36 @@ SELECT
     f.household_id,
     f.reading_date AS date,
 
-    -- Target / Verbrauch
     sum(f.kwh_received_total) AS kwh_received_total,
     sum(f.kwh_returned_total) AS kwh_returned_total,
     sum(f.kwh_received_heatpump) AS kwh_received_heatpump,
 
-    -- Haushaltsinformationen
     h.household_group,
     h.has_pv_system,
 
-    -- Wetter
     avg(w.temperature_avg_daily) AS temperature_avg_daily,
     avg(w.temperature_min_daily) AS temperature_min_daily,
     avg(w.temperature_max_daily) AS temperature_max_daily,
     avg(w.heating_degree_sia_daily) AS heating_degree_sia_daily,
     avg(w.sunshine_duration_daily) AS sunshine_duration_daily,
 
-    -- Gebäude / Audit
     p.report_id,
     p.visit_date,
-    p.building_type,
-    p.building_floorareaheated_total,
-    p.building_residents,
-    p.building_renovated_windows,
-    p.building_renovated_roof,
-    p.building_renovated_walls,
-    p.building_renovated_floor,
-    p.building_pvsystem_size
+    p.Building_Type,
+    p.Building_FloorAreaHeated_Total,
+    p.Building_Residents,
+    p.Building_Renovated_Windows,
+    p.Building_Renovated_Roof,
+    p.Building_Renovated_Walls,
+    p.Building_Renovated_Floor,
+    p.Building_PVSystem_Size
 
 FROM fct_meter_readings AS f
 
-INNER JOIN dim_household AS h
+LEFT JOIN dim_household AS h
     ON f.household_id = h.household_id
 
-INNER JOIN dim_weather AS w
+LEFT JOIN dim_weather AS w
     ON f.weather_id = w.weather_id
     AND f.reading_date = w.weather_date
 
@@ -54,14 +50,14 @@ GROUP BY
     h.has_pv_system,
     p.report_id,
     p.visit_date,
-    p.building_type,
-    p.building_floorareaheated_total,
-    p.building_residents,
-    p.building_renovated_windows,
-    p.building_renovated_roof,
-    p.building_renovated_walls,
-    p.building_renovated_floor,
-    p.building_pvsystem_size
+    p.Building_Type,
+    p.Building_FloorAreaHeated_Total,
+    p.Building_Residents,
+    p.Building_Renovated_Windows,
+    p.Building_Renovated_Roof,
+    p.Building_Renovated_Walls,
+    p.Building_Renovated_Floor,
+    p.Building_PVSystem_Size
 
 ORDER BY
     f.household_id,

@@ -3,16 +3,16 @@
 -- Alle benötigten Attribute bereits denormalisiert
 
 SELECT
-    household_id,
+    `meter.household_id` AS household_id,
     reading_date AS date,
 
-    -- Target / Verbrauch
+    -- Verbrauch
     sum(kwh_received_total) AS kwh_received_total,
     sum(kwh_returned_total) AS kwh_returned_total,
     sum(kwh_received_heatpump) AS kwh_received_heatpump,
 
-    -- Haushaltsinformationen
-    household_group,
+    -- Haushalt
+    `meter.household_group` AS household_group,
     has_pv_system,
 
     -- Wetter
@@ -22,36 +22,36 @@ SELECT
     avg(heating_degree_sia_daily) AS heating_degree_sia_daily,
     avg(sunshine_duration_daily) AS sunshine_duration_daily,
 
-    -- Gebäude / Audit
+    -- Audit / Gebäude
     report_id,
     visit_date,
-    building_type,
-    building_floorareaheated_total,
-    building_residents,
-    building_renovated_windows,
-    building_renovated_roof,
-    building_renovated_walls,
-    building_renovated_floor,
-    building_pvsystem_size
+    Building_Type,
+    Building_FloorAreaHeated_Total,
+    Building_Residents,
+    Building_Renovated_Windows,
+    Building_Renovated_Roof,
+    Building_Renovated_Walls,
+    Building_Renovated_Floor,
+    Building_PVSystem_Size
 
 FROM obt_smart_meter_readings
 
 GROUP BY
-    household_id,
+    `meter.household_id`,
     reading_date,
-    household_group,
+    `meter.household_group`,
     has_pv_system,
     report_id,
     visit_date,
-    building_type,
-    building_floorareaheated_total,
-    building_residents,
-    building_renovated_windows,
-    building_renovated_roof,
-    building_renovated_walls,
-    building_renovated_floor,
-    building_pvsystem_size
+    Building_Type,
+    Building_FloorAreaHeated_Total,
+    Building_Residents,
+    Building_Renovated_Windows,
+    Building_Renovated_Roof,
+    Building_Renovated_Walls,
+    Building_Renovated_Floor,
+    Building_PVSystem_Size
 
 ORDER BY
     household_id,
-    reading_date;
+    date;

@@ -1,23 +1,15 @@
--- Q05: Monatlicher Wärmepumpenverbrauch nach PV-Status
---       unter kalten Wetterbedingungen und mit gültigem Audit
--- Benchmark: One Big Table
--- Join-Komplexität: keine
+-- Q04: Durchschnittlicher Wärmepumpenverbrauch nach Auditjahr
+-- Benchmark: Star Schema
+-- Join-Komplexität: zeitabhängiger ASOF JOIN
 
 SELECT
-    toStartOfMonth(reading_date) AS month,
-    has_pv_system,
-    avg(kwh_received_heatpump) AS avg_heatpump_consumption
-FROM obt_smart_meter_readings
-
-WHERE
-    heating_degree_sia_daily > 10
-    AND report_id IS NOT NULL
-    AND kwh_received_heatpump IS NOT NULL
-
-GROUP BY
-    month,
-    has_pv_system
-
-ORDER BY
-    month,
-    has_pv_system;
+    p.visit_year,
+    avg(f.kwh_received_heatpump) AS avg_heatpump_consumption
+FROM fct_meter_readings AS f
+ASOF LEFT JOIN dim_protocol AS p
+    ON p.household_id = f.household_id
+    AND p.visit_date <= f.reading_timestamp
+WHERE p.visit_date IS NOT NULL
+  AND p.visit_year IS NOT NULL
+GROUP BY p.visit_year
+ORDER BY p.visit_year;
