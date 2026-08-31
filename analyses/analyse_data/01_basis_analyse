@@ -1,0 +1,223 @@
+- ============================================================
+-- 1. Anzahl aller Haushalte
+-- ============================================================
+
+SELECT
+    count(DISTINCT household_id) AS households_total
+FROM dbt_to_clickhouse.stg_households;
+
+
+-- ============================================================
+-- 2. Anzahl Haushalte mit Smart-Meter-Daten
+-- ============================================================
+
+SELECT
+    count(DISTINCT household_id) AS smart_meter_households
+FROM dbt_to_clickhouse.stg_meter_readings;
+
+
+-- ============================================================
+-- 3. Zeitraum der Smart-Meter-Daten
+-- ============================================================
+
+SELECT
+    min(toDate(reading_timestamp)) AS first_meter_reading,
+    max(toDate(reading_timestamp)) AS last_meter_reading
+FROM dbt_to_clickhouse.stg_meter_readings;
+
+
+-- ============================================================
+-- 4. Anzahl aller Smart-Meter-Zeilen
+-- ============================================================
+
+SELECT
+    count(*) AS meter_reading_rows
+FROM dbt_to_clickhouse.stg_meter_readings;
+
+
+-- ============================================================
+-- 5. Anzahl unterschiedlicher Haushalte mit Auditprotokollen
+-- ============================================================
+
+SELECT
+    count(DISTINCT household_id) AS protocol_households
+FROM dbt_to_clickhouse.stg_protocols;
+
+
+-- ============================================================
+-- 6. Anzahl der Auditberichte
+-- ============================================================
+
+SELECT
+    count(DISTINCT report_id) AS protocol_reports
+FROM dbt_to_clickhouse.stg_protocols;
+
+
+-- ============================================================
+-- 7. Audit-Haushalte mit Smart-Meter-Daten
+-- ============================================================
+
+SELECT
+    count(DISTINCT p.household_id) AS matched_protocol_households
+FROM dbt_to_clickhouse.stg_protocols AS p
+INNER JOIN
+(
+    SELECT DISTINCT household_id
+    FROM dbt_to_clickhouse.stg_meter_readings
+) AS m
+    ON p.household_id = m.household_id;
+
+
+-- ============================================================
+-- 8. Audit-Haushalte insgesamt vs. verknüpfbare Haushalte
+-- ============================================================
+
+SELECT
+    count(DISTINCT p.household_id) AS protocol_households,
+    count(DISTINCT m.household_id) AS matched_smart_meter_households
+FROM dbt_to_clickhouse.stg_protocols AS p
+LEFT JOIN
+(
+    SELECT DISTINCT household_id
+    FROM dbt_to_clickhouse.stg_meter_readings
+) AS m
+    ON p.household_id = m.household_id;
+
+
+-- ============================================================
+-- 9. Audit-Haushalte ohne Smart-Meter-Daten
+-- ============================================================
+
+SELECT
+    count(DISTINCT p.household_id) AS protocol_households_without_meter_data
+FROM dbt_to_clickhouse.stg_protocols AS p
+LEFT JOIN
+(
+    SELECT DISTINCT household_id
+    FROM dbt_to_clickhouse.stg_meter_readings
+) AS m
+    ON p.household_id = m.household_id
+WHERE m.household_id IS NULL;
+
+
+-- ============================================================
+-- 10. Anzahl der Wetterstationen
+-- ============================================================
+
+SELECT
+    count(DISTINCT weather_id) AS weather_stations
+FROM dbt_to_clickhouse.stg_weather;
+
+
+-- ============================================================
+-- 11. Zeitraum der Wetterdaten
+-- ============================================================
+
+SELECT
+    min(weather_date) AS first_weather_date,
+    max(weather_date) AS last_weather_date
+FROM dbt_to_clickhouse.stg_weather;
+
+
+-- ============================================================
+-- 12. Anzahl aller Wetterzeilen
+-- ============================================================
+
+SELECT
+    count(*) AS weather_rows
+FROM dbt_to_clickhouse.stg_weather;
+
+
+-- ============================================================
+-- 13. Anzahl tatsächlich verwendeter Wetterstationen
+-- ============================================================
+
+SELECT
+    count(DISTINCT weather_id) AS assigned_weather_stations
+FROM dbt_to_clickhouse.stg_households
+WHERE weather_id IS NOT NULL;
+
+
+-- ============================================================
+-- 14. Haushalte ohne Wetterstationszuordnung
+-- ============================================================
+
+SELECT
+    count(*) AS households_without_weather_station
+FROM dbt_to_clickhouse.stg_households
+WHERE weather_id IS NULL;
+
+
+-- ============================================================
+-- 15. Struktur der Haushaltstabelle
+-- ============================================================
+
+DESCRIBE TABLE dbt_to_clickhouse.stg_households;
+
+
+-- ============================================================
+-- 16. Struktur der Auditprotokolle
+-- ============================================================
+
+DESCRIBE TABLE dbt_to_clickhouse.stg_protocols;
+
+
+-- ============================================================
+-- 17. Struktur der Smart-Meter-Tabelle
+-- ============================================================
+
+DESCRIBE TABLE dbt_to_clickhouse.stg_meter_readings;
+
+
+-- ============================================================
+-- 18. Struktur der Wettertabelle
+-- ============================================================
+
+DESCRIBE TABLE dbt_to_clickhouse.stg_weather;
+
+
+-- ============================================================
+-- 19. ZENTRALE KENNZAHLEN IN EINER ABFRAGE
+-- ============================================================
+
+SELECT
+    (
+        SELECT count(DISTINCT household_id)
+        FROM dbt_to_clickhouse.stg_households
+    ) AS households_total,
+
+    (
+        SELECT count(DISTINCT household_id)
+        FROM dbt_to_clickhouse.stg_meter_readings
+    ) AS smart_meter_households,
+
+    (
+        SELECT min(toDate(reading_timestamp))
+        FROM dbt_to_clickhouse.stg_meter_readings
+    ) AS first_meter_reading,
+
+    (
+        SELECT max(toDate(reading_timestamp))
+        FROM dbt_to_clickhouse.stg_meter_readings
+    ) AS last_meter_reading,
+
+    (
+        SELECT count(DISTINCT household_id)
+        FROM dbt_to_clickhouse.stg_protocols
+    ) AS protocol_households,
+
+    (
+        SELECT count(DISTINCT p.household_id)
+        FROM dbt_to_clickhouse.stg_protocols AS p
+        INNER JOIN
+        (
+            SELECT DISTINCT household_id
+            FROM dbt_to_clickhouse.stg_meter_readings
+        ) AS m
+            ON p.household_id = m.household_id
+    ) AS matched_protocol_households,
+
+    (
+        SELECT count(DISTINCT weather_id)
+        FROM dbt_to_clickhouse.stg_weather
+    ) AS weather_stations;
